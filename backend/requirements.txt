@@ -1,0 +1,6 @@
+fastapi["standard"]
+supabase
+pydantic-settings
+httpx
+beautifulsoup4
+apscheduler

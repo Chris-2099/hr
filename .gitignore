@@ -218,3 +218,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Project-specific additions ---
+
+# Frontend is on disk but intentionally not tracked yet (backend-first
+# push). Remove this line when ready to add the frontend to this repo.
+/frontend/
+
+# Claude Code local settings (per-developer, not shared)
+.claude/settings.local.json

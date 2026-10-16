@@ -1,0 +1,43 @@
+# .dockerignore
+
+# Git / Version Control
+.git
+.gitignore
+
+# Python caching and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments (local dependencies)
+.venv/
+venv/
+env/
+ENV/
+
+# Local Environment Secrets (Crucial to prevent credential leaks)
+.env
+.env.*
+*.local
+secrets.dev.yaml
+
+# IDEs and Text Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing and Coverage
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage
+.tox/
+
+# Logs and build artifacts
+*.log
+build/
+dist/
+*.egg-info/

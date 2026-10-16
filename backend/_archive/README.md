@@ -1,0 +1,4 @@
+Files moved here during the backend debloat pass (see docs/backend-audit.md), not deleted.
+
+- `routers/database.py` — read-only JSON passthrough endpoints that only existed to serve the old React frontend. Power BI connects to Postgres directly, so these have no remaining consumer. Safe to delete once confirmed unused by any remaining client (including a possible future embedded-Power-BI-in-React path, which would not need these either).
+- `schemas/talent.py`, `performance.py`, `learning.py`, `compensation.py` — never imported anywhere, and currently broken (`from schemas import AppBaseModel` instead of `from api.schemas.common import AppBaseModel`). Kept here as a starting point if/when those entities get real ingestion logic, since the field shapes roughly match the corresponding tables in `src/utils/database.sql`.
