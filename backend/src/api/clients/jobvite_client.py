@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.config import settings
+from src.core.config import settings
 
 
 class JobviteError(RuntimeError):
@@ -28,7 +28,7 @@ class JobviteError(RuntimeError):
 
 class JobviteClient:
     def __init__(self) -> None:
-        self.base_url = (settings.JOBVITE_API_URL or "https://api.jobvite.com/api/v2").rstrip("/")
+        self.base_url = (settings.JOBVITE_URL or "https://api.jobvite.com/api/v2").rstrip("/")
         self.api_key = settings.JOBVITE_API_KEY
         self.api_secret = settings.JOBVITE_API_SECRET
 

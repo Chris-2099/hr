@@ -1,14 +1,15 @@
 """Exports every table in the local database to one CSV file per table,
 for Power BI to read directly.
 
-    python -m app.export_powerbi                    # writes to ./powerbi_export/
-    python -m app.export_powerbi --output-dir PATH   # writes somewhere else
+    python -m src.export_powerbi                    # writes to ./powerbi_export/
+    python -m src.export_powerbi --output-dir PATH   # writes somewhere else
 
 Each table is loaded into a pandas DataFrame (via SQLAlchemy's engine) and
 written out as CSV - the simplest format Power BI can consume with no
 driver install: "Get Data > Folder" against the output directory picks up
 every table at once, or "Get Data > Text/CSV" for one at a time. Re-run
-this after app/sync.py (or app/seed/seed_data.py) brings in new data and
+this after src/api/jobvite.py / src/api/dayforce.py (or
+src/seed/seed_data.py) brings in new data and
 point Power BI's refresh at the same output directory.
 
 CSV, not Parquet, is the deliberate choice here: it needs no extra Power BI
@@ -27,7 +28,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import inspect
 
-from app.database import engine
+from src.core.database import engine
 
 logger = logging.getLogger(__name__)
 

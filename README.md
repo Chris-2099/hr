@@ -12,18 +12,26 @@ integrations" below) and makes genuine calls to those real services — it
 just has no real credentials yet, so every call fails cleanly and logs the
 attempt rather than silently doing nothing.
 
+> This branch's `backend/src/` layout (`api/clients/`, `core/`, `utils/`)
+> mirrors the structure of this repo's `main` branch, which is an earlier,
+> Supabase/FastAPI-backed attempt at the same charter. This branch keeps
+> that same shape so the two are easy to compare/copy between, but makes
+> two deliberate different calls: SQLite instead of Supabase (self-contained,
+> nothing to provision), and no FastAPI/server layer at all (see "Access
+> control" below for why the RBAC layer went with it too).
+
 ## What's here
 
-- **`backend/app/seed/seed_data.py`** — generates ~300 employees, ~2,000+
+- **`backend/src/seed/seed_data.py`** — generates ~300 employees, ~2,000+
   recruiting/performance/engagement/compensation records into
   `backend/hr_dashboard.db` (SQLite). Fixed random seed — re-running it
   reproduces the same dataset byte-for-byte.
-- **`backend/app/jobvite.py`** / **`backend/app/dayforce.py`** — the real
-  ingestion pipeline, one module per source system: each calls its client
-  (`app/integrations/*_client.py`), maps the response onto our schema
-  (`app/integrations/*_mapper.py`), and upserts into the database. Logs
+- **`backend/src/api/jobvite.py`** / **`backend/src/api/dayforce.py`** — the
+  real ingestion pipeline, one module per source system: each calls its
+  client (`src/api/clients/*_client.py`), maps the response onto our schema
+  (`src/api/clients/*_mapper.py`), and upserts into the database. Logs
   every attempt (success or failure) to the `ingestion_runs` table.
-- **`backend/app/export_powerbi.py`** — reads every table out of the
+- **`backend/src/export_powerbi.py`** — reads every table out of the
   database into a pandas DataFrame and writes one CSV per table. Point
   Power BI's "Get Data > Folder" (or "Text/CSV" per file) at the output
   directory.
@@ -38,18 +46,18 @@ container, etc.) and a database they read/write.
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env                       # defaults work as-is for local dev
+cp .env.example .env                        # defaults work as-is for local dev
 
-python -m app.seed.seed_data                # (re)creates hr_dashboard.db with fresh fake data
-python -m app.jobvite                       # pulls from Jobvite, upserts into hr_dashboard.db
-python -m app.dayforce                      # pulls from Dayforce, upserts into hr_dashboard.db
-python -m app.export_powerbi                # writes ./powerbi_export/*.csv
+python -m src.seed.seed_data                 # (re)creates hr_dashboard.db with fresh fake data
+python -m src.api.jobvite                    # pulls from Jobvite, upserts into hr_dashboard.db
+python -m src.api.dayforce                   # pulls from Dayforce, upserts into hr_dashboard.db
+python -m src.export_powerbi                 # writes ./powerbi_export/*.csv
 
 # In Power BI Desktop: Get Data > Folder > point at backend/powerbi_export/
 ```
 
-Re-run `app.jobvite` / `app.dayforce` then `app.export_powerbi` (in that
-order) any time you want Power BI's next refresh to pick up new data.
+Re-run `src.api.jobvite` / `src.api.dayforce` then `src.export_powerbi` (in
+that order) any time you want Power BI's next refresh to pick up new data.
 
 ## Docker
 
@@ -58,16 +66,17 @@ docker compose run --rm backend
 ```
 
 This is a one-shot pipeline run, not a long-lived service: seeds the DB on
-first run only, runs the sync step, then exports CSVs to `./powerbi_export/`
-on the host (mounted volume). Run it on whatever schedule you need — cron,
-Task Scheduler, a scheduled CI job, etc. There's no port to expose and
-nothing to reverse-proxy; back up the SQLite file (or the `hr_db` volume)
-on whatever schedule the org already uses for small internal tools.
+first run only, runs each source's sync, then exports CSVs to
+`./powerbi_export/` on the host (mounted volume). Run it on whatever
+schedule you need — cron, Task Scheduler, a scheduled CI job, etc. There's
+no port to expose and nothing to reverse-proxy; back up the SQLite file (or
+the `hr_db` volume) on whatever schedule the org already uses for small
+internal tools.
 
 ## Data model
 
 Two source-system-shaped halves, joined on `department_id` / `employee_id`.
-See `backend/app/models.py` for the full schema (every Jobvite/Dayforce
+See `backend/src/models.py` for the full schema (every Jobvite/Dayforce
 field mapping is called out in an inline comment next to its column).
 
 - **Dayforce-shaped (HRIS):** `employees`, `departments`, `positions`,
@@ -106,38 +115,38 @@ users/groups to them in the Power BI Service, rather than reimplementing
 department/compensation scoping here for an API nothing calls anymore.
 
 The `users` / `roles` / `user_department_scopes` tables (with bcrypt
-password hashes from `app.auth.hash_password`) are still seeded, since
-they may be useful as an RLS mapping table (e.g. a DAX filter comparing
-`USERPRINCIPALNAME()` against `users.email` + department scope) once the
-Power BI model is built — but that's a data-modeling decision to make
-inside Power BI, not code to write here.
+password hashes from `src.utils.auth.hash_password`) are still seeded,
+since they may be useful as an RLS mapping table (e.g. a DAX filter
+comparing `USERPRINCIPALNAME()` against `users.email` + department scope)
+once the Power BI model is built — but that's a data-modeling decision to
+make inside Power BI, not code to write here.
 
 ## API integrations: real code, placeholder credentials
 
-`app/jobvite.py` / `app/dayforce.py` call these — they're **real, implemented integrations**, not
-stubs: genuine HTTP calls, genuine auth flows, confirmed against the actual
-public developer docs during this build. They've never succeeded
-end-to-end because no real credentials exist yet — calling either today
-reaches the real Jobvite/Dayforce servers and comes back with a real auth
-error (verified: Jobvite returns `401 Invalid api/secret`, Dayforce's
-identity service returns `invalid_grant`), logged to `ingestion_runs`
-either way.
+`src/api/jobvite.py` / `src/api/dayforce.py` call these — they're **real,
+implemented integrations**, not stubs: genuine HTTP calls, genuine auth
+flows, confirmed against the actual public developer docs during this
+build. They've never succeeded end-to-end because no real credentials
+exist yet — calling either today reaches the real Jobvite/Dayforce servers
+and comes back with a real auth error (verified: Jobvite returns `401
+Invalid api/secret`, Dayforce's identity service returns `invalid_grant`),
+logged to `ingestion_runs` either way.
 
-- **`app/integrations/jobvite_client.py`** — GET Job (requisitions), GET
+- **`src/api/clients/jobvite_client.py`** — GET Job (requisitions), GET
   Candidate, GET Interview, authenticated via Jobvite's documented
   `x-jvi-api`/`x-jvi-sc` header scheme.
-- **`app/integrations/dayforce_client.py`** — the documented `POST
+- **`src/api/clients/dayforce_client.py`** — the documented `POST
   /connect/token` password-grant flow, then Bearer-token calls to
   `/Employees`, `/Employees/{XRefCode}/WorkAssignments`,
   `/CompensationSummary`, `/OrgUnitInfos`, `/Locations`.
-- **`app/integrations/*_mapper.py`** — raw API JSON → our column names.
+- **`src/api/clients/*_mapper.py`** — raw API JSON → our column names.
   The Jobvite mapper is verified field-by-field against the API doc's
   response-spec tables. The Dayforce `WorkAssignments`/`CompensationSummary`
   mapper is flagged `UNVERIFIED` in its own docstring — Dayforce's doc page
   names those as subordinate endpoints without listing their field shapes,
   so those specific field names are an informed guess, not a confirmed fact.
-- **`app/jobvite.py`** / **`app/dayforce.py`** — call the clients, run the
-  mappers, best-effort upsert into the real tables (resolving
+- **`src/api/jobvite.py`** / **`src/api/dayforce.py`** — call the clients,
+  run the mappers, best-effort upsert into the real tables (resolving
   department/location by name match), and log every attempt to
   `IngestionRun`.
 
@@ -169,3 +178,9 @@ none of that embedding plumbing is needed.
   that needs a gateway-supported source (e.g. Postgres via an on-prem
   gateway, or Azure SQL Database) once this moves past manual/local
   refresh in Power BI Desktop.
+- No in-process scheduler (the `main` branch's FastAPI build had one via
+  APScheduler, running inside the server's lifespan). With no server to
+  host it, "automated refresh" means an external scheduler (cron, Task
+  Scheduler, a scheduled CI job) invoking `src.api.jobvite` /
+  `src.api.dayforce` / `src.export_powerbi` directly — simpler than the
+  in-process version since there's no HTTP hop to make either.

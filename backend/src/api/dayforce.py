@@ -1,12 +1,12 @@
 """Pulls data from Dayforce and upserts it into the local database.
 
-Pairs with app/integrations/dayforce_client.py (the raw HTTP calls) and
-app/integrations/dayforce_mapper.py (raw JSON -> our column names) - this
+Pairs with src/api/clients/dayforce_client.py (the raw HTTP calls) and
+src/api/clients/dayforce_mapper.py (raw JSON -> our column names) - this
 module is the orchestration layer: call the client, map the response,
 upsert, log the attempt.
 
-    python -m app.dayforce              # run every step once
-    python -m app.dayforce employees    # run one step
+    python -m src.api.dayforce              # run every step once
+    python -m src.api.dayforce employees    # run one step
 
 None of these have ever succeeded end-to-end - there are no real Dayforce
 credentials yet (see backend/.env.example) - so running this today logs a
@@ -23,10 +23,10 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app import models
-from app.database import SessionLocal
-from app.integrations.dayforce_client import DayforceClient, DayforceError
-from app.integrations.dayforce_mapper import map_employee
+from src import models
+from src.core.database import SessionLocal
+from src.api.clients.dayforce_client import DayforceClient, DayforceError
+from src.api.clients.dayforce_mapper import map_employee
 
 logger = logging.getLogger(__name__)
 

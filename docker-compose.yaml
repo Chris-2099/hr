@@ -6,13 +6,13 @@ services:
   backend:
     build: ./backend
     environment:
-      # Real client code exists for both (app/integrations/) - these just
+      # Real client code exists for both (src/api/clients/) - these just
       # stay empty/placeholder until real credentials are supplied, which is
       # all that's needed to go from "implemented" to "working".
-      JOBVITE_API_URL: ${JOBVITE_API_URL:-}
+      JOBVITE_URL: ${JOBVITE_URL:-}
       JOBVITE_API_KEY: ${JOBVITE_API_KEY:-}
       JOBVITE_API_SECRET: ${JOBVITE_API_SECRET:-}
-      DAYFORCE_API_URL: ${DAYFORCE_API_URL:-}
+      DAYFORCE_URL: ${DAYFORCE_URL:-}
       DAYFORCE_TOKEN_URL: ${DAYFORCE_TOKEN_URL:-https://dfid.dayforcehcm.com/connect/token}
       DAYFORCE_CLIENT_NAMESPACE: ${DAYFORCE_CLIENT_NAMESPACE:-}
       DAYFORCE_USERNAME: ${DAYFORCE_USERNAME:-}

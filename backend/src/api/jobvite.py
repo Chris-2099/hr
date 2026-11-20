@@ -1,13 +1,13 @@
 """Pulls data from Jobvite and upserts it into the local database.
 
-Pairs with app/integrations/jobvite_client.py (the raw HTTP calls) and
-app/integrations/jobvite_mapper.py (raw JSON -> our column names) - this
+Pairs with src/api/clients/jobvite_client.py (the raw HTTP calls) and
+src/api/clients/jobvite_mapper.py (raw JSON -> our column names) - this
 module is the orchestration layer: call the client, map the response,
 resolve foreign keys, upsert, log the attempt.
 
-    python -m app.jobvite                       # run every step once
-    python -m app.jobvite requisitions          # run one step
-    python -m app.jobvite interviews <app_id>   # interviews needs an application id
+    python -m src.api.jobvite                       # run every step once
+    python -m src.api.jobvite requisitions          # run one step
+    python -m src.api.jobvite interviews <app_id>   # interviews needs an application id
 
 None of these have ever succeeded end-to-end - there are no real Jobvite
 credentials yet (see backend/.env.example) - so running this today logs a
@@ -24,10 +24,10 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app import models
-from app.database import SessionLocal
-from app.integrations.jobvite_client import JobviteClient, JobviteError
-from app.integrations.jobvite_mapper import (
+from src import models
+from src.core.database import SessionLocal
+from src.api.clients.jobvite_client import JobviteClient, JobviteError
+from src.api.clients.jobvite_mapper import (
     map_candidate_and_application,
     map_interview_slots,
     map_requisition,

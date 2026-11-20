@@ -2,7 +2,7 @@
 a real Jobvite + Dayforce sync would produce, per the HR Workforce & Org
 Health Dashboard charter. Run with:
 
-    python -m app.seed.seed_data
+    python -m src.seed.seed_data
 
 This DROPS and recreates all tables, so re-running gives a fresh, reproducible
 (random.seed-pinned) dataset. The resulting hr_dashboard.db is the entire
@@ -17,9 +17,9 @@ import random
 
 from faker import Faker
 
-from app import models
-from app.auth import hash_password
-from app.database import Base, SessionLocal, engine
+from src import models
+from src.utils.auth import hash_password
+from src.core.database import Base, SessionLocal, engine
 
 random.seed(42)
 fake = Faker()

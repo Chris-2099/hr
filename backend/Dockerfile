@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
+COPY src ./src
 
 # The SQLite file lives in /data so it survives container restarts when
 # mounted as a volume (see docker-compose.yaml).
@@ -16,4 +16,4 @@ RUN mkdir -p /data /export
 # first boot only (skip if the db file already has data), run each source's
 # sync, then export to CSV for Power BI. Run on a schedule (cron, Task
 # Scheduler, `docker compose run`, etc.) rather than left running.
-CMD ["sh", "-c", "test -s /data/hr_dashboard.db || python -m app.seed.seed_data; python -m app.jobvite; python -m app.dayforce; python -m app.export_powerbi --output-dir /export"]
+CMD ["sh", "-c", "test -s /data/hr_dashboard.db || python -m src.seed.seed_data; python -m src.api.jobvite; python -m src.api.dayforce; python -m src.export_powerbi --output-dir /export"]

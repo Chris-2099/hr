@@ -4,7 +4,7 @@ Retrieving Employee Information").
 
 Like jobvite_client.py, this makes genuine HTTP calls but has never been
 run against a live Dayforce tenant - no real credentials exist yet. It's
-the integration-ready counterpart to the fake data in app/seed/seed_data.py.
+the integration-ready counterpart to the fake data in src/seed/seed_data.py.
 
 Auth: password grant against Dayforce's identity service
 (`POST {DAYFORCE_TOKEN_URL}`, form-encoded `grant_type=password` +
@@ -19,7 +19,7 @@ import time
 
 import httpx
 
-from app.config import settings
+from src.core.config import settings
 
 
 class DayforceError(RuntimeError):
@@ -28,7 +28,7 @@ class DayforceError(RuntimeError):
 
 class DayforceClient:
     def __init__(self) -> None:
-        self.base_url = settings.DAYFORCE_API_URL.rstrip("/")
+        self.base_url = settings.DAYFORCE_URL.rstrip("/")
         self.token_url = settings.DAYFORCE_TOKEN_URL
         self.company_id = settings.DAYFORCE_CLIENT_NAMESPACE
         self.username = settings.DAYFORCE_USERNAME
