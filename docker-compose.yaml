@@ -1,0 +1,26 @@
+services:
+  # One-shot pipeline container: seed (first run only) -> sync -> export to
+  # CSV. No server, no exposed port - nothing to serve now that Power BI is
+  # the frontend. Run it on whatever schedule you need:
+  #   docker compose run --rm backend
+  backend:
+    build: ./backend
+    environment:
+      # Real client code exists for both (app/integrations/) - these just
+      # stay empty/placeholder until real credentials are supplied, which is
+      # all that's needed to go from "implemented" to "working".
+      JOBVITE_API_URL: ${JOBVITE_API_URL:-}
+      JOBVITE_API_KEY: ${JOBVITE_API_KEY:-}
+      JOBVITE_API_SECRET: ${JOBVITE_API_SECRET:-}
+      DAYFORCE_API_URL: ${DAYFORCE_API_URL:-}
+      DAYFORCE_TOKEN_URL: ${DAYFORCE_TOKEN_URL:-https://dfid.dayforcehcm.com/connect/token}
+      DAYFORCE_CLIENT_NAMESPACE: ${DAYFORCE_CLIENT_NAMESPACE:-}
+      DAYFORCE_USERNAME: ${DAYFORCE_USERNAME:-}
+      DAYFORCE_PASSWORD: ${DAYFORCE_PASSWORD:-}
+      DAYFORCE_CLIENT_ID: ${DAYFORCE_CLIENT_ID:-Dayforce.HCMAnywhere.Client}
+    volumes:
+      - hr_db:/data
+      - ./powerbi_export:/export
+
+volumes:
+  hr_db:
