@@ -13,6 +13,16 @@ Encryption" variant (`x-jvi-api` / `x-jvi-sc`, both plain text). The
 HMAC-SHA256 "Header with Encryption" variant is documented there too if a
 customer's Jobvite configuration requires it instead - swap `_auth_headers`
 for that signing scheme if so.
+
+UNRESOLVED (flagged during a later doc re-check): the full 225-page
+Jobvite API v2 PDF describes query-string creds (`?api=&sc=`) or an
+HMAC-signed header scheme (`X-JVI-API` + `X-JVI-SIGN` + `X-JVI-EPOCH`) -
+not two plain-text headers. This file's `04122025.pdf` source may be a
+newer revision that simplified this (a gated Jobvite help-center article
+hints at a "post-April-2024 header-based scheme" using these exact
+literal header names, but it couldn't be fetched to confirm). Don't change
+this without a real credential to test against - getting it wrong either
+way is silent until a real call is made.
 """
 
 from __future__ import annotations
@@ -50,10 +60,10 @@ class JobviteClient:
         return resp.json()
 
     def get_requisitions(self, start: int = 1, count: int = 100, job_state: str | None = None) -> dict:
-        """GET /job - requisitions. `job_state` maps to Jobvite's `status` filter param."""
+        """GET /job - requisitions. `job_state` maps to Jobvite's `jobStatus` filter param."""
         params: dict = {"start": start, "count": count}
         if job_state:
-            params["status"] = job_state
+            params["jobStatus"] = job_state
         return self._get("job", params)
 
     def get_candidates(
@@ -74,16 +84,35 @@ class JobviteClient:
             params["dateend"] = date_end
         return self._get("candidate", params)
 
-    def get_interviews(self, application_id: str | None = None, workflow_state_id: str | None = None) -> dict:
-        """GET /interview - interview blocks for an application/workflow state."""
+    def get_interviews(
+        self,
+        eid: str | None = None,
+        application_id: str | None = None,
+        workflow_state_id: str | None = None,
+    ) -> dict:
+        """GET /interview - interview blocks for an application/workflow state.
+
+        `eid` (the interview-block id itself) is documented as a required
+        param - omitting it is reported to return HTTP 412. We don't yet
+        have a source for interview-block ids anywhere in our data (our
+        own sync only ever has an application_id to key off of), so this
+        is callable with `eid` when a caller has one, but src/api/jobvite.py's
+        sync_interviews() doesn't supply it today - calling it for real
+        will likely need a different discovery step first (e.g. listing
+        interview blocks for an application) once real credentials exist
+        to confirm against."""
         params: dict = {}
+        if eid:
+            params["eId"] = eid
         if application_id:
             params["applicationId"] = application_id
         if workflow_state_id:
             params["workflowStateId"] = workflow_state_id
         return self._get("interview", params)
 
-    def get_departments(self) -> dict:
+    def get_departments(self, start: int = 1, count: int = 500) -> dict:
         """GET /department - the department taxonomy Jobvite requisitions are
-        filed under. No pagination params - this is a small, fixed list."""
-        return self._get("department")
+        filed under. Documented params: start/count (default count 500) plus
+        ids/name filters we don't use - pass count explicitly if a tenant
+        has more than 500 departments."""
+        return self._get("department", {"start": start, "count": count})

@@ -8,9 +8,13 @@ build. Department/position/location/manager/employment-status/termination-
 date are NOT on that base object - Dayforce's own doc page explicitly
 states it documents the WorkAssignments/EmploymentStatuses subordinate
 resources only as named endpoints, without listing their field shapes.
-So `map_work_assignment` below is a best-guess based on Dayforce's general
-naming convention (XRefCode-suffixed fields), not a confirmed mapping - it
-must be validated against one real tenant's response before being trusted.
+
+`map_work_assignment`/`map_compensation` below were updated against a
+third-party API connector's documented schema for these two resources
+(not Dayforce's own primary docs, which don't expose their shape to a
+non-tenant reader) - stronger than a cold guess, but still UNVERIFIED
+against a real tenant response. See each function's docstring for what
+that source does and doesn't confirm.
 """
 
 from __future__ import annotations
@@ -41,13 +45,25 @@ def map_employee(raw: dict) -> dict:
 
 def map_work_assignment(raw: dict) -> dict:
     """GET /Employees/{XRefCode}/WorkAssignments response item -> org
-    placement fields. UNVERIFIED field names - confirm against a real
-    tenant response (Dayforce's doc page did not enumerate these) before
-    relying on this in a real sync."""
+    placement fields. UNVERIFIED against a real tenant response, but the
+    nested shape here (department/position/job under a `Position` object,
+    location under a `Location` object) matches a third-party connector's
+    documented schema for this resource - confirm before relying on it in
+    a real sync. That same source does NOT show `ManagerXRefCode` or
+    `EmploymentStatusXRefCode` anywhere on this resource at all - manager
+    may live on a separate "Employee Managers" endpoint, and employment
+    status may not be here either; both are kept below as best-effort
+    fallback reads, not confirmed fields."""
+    position = raw.get("Position") or {}
+    department = position.get("Department") or {}
+    job = position.get("Job") or {}
+    location = raw.get("Location") or {}
     return {
-        "department_xref_code": raw.get("OrgUnitXRefCode") or raw.get("DepartmentXRefCode"),
-        "position_xref_code": raw.get("JobXRefCode") or raw.get("PositionXRefCode"),
-        "location_xref_code": raw.get("LocationXRefCode"),
+        "department_xref_code": department.get("XRefCode") or raw.get("OrgUnitXRefCode") or raw.get("DepartmentXRefCode"),
+        "position_xref_code": position.get("XRefCode") or raw.get("PositionXRefCode"),
+        "job_xref_code": job.get("XRefCode") or raw.get("JobXRefCode"),
+        "location_xref_code": location.get("XRefCode") or raw.get("LocationXRefCode"),
+        # Unconfirmed on this resource at all - see docstring above.
         "manager_dayforce_employee_id": raw.get("ManagerXRefCode"),
         "employment_status": raw.get("EmploymentStatusXRefCode"),
         "effective_start": _parse_date(raw.get("EffectiveStart") or raw.get("StartDate")),
@@ -55,10 +71,16 @@ def map_work_assignment(raw: dict) -> dict:
 
 
 def map_compensation(raw: dict) -> dict:
-    """GET /Employees/{XRefCode}/CompensationSummary. UNVERIFIED field
-    names - same caveat as map_work_assignment."""
+    """GET /Employees/{XRefCode}/CompensationSummary. UNVERIFIED against a
+    real tenant response, but field names below match a third-party
+    connector's documented schema for this resource. That source does NOT
+    show `CurrencyCode` or `AnnualSalary` anywhere on it - kept as
+    fallbacks, not confirmed fields. The same source documents several
+    real fields we don't map yet (PayGrade, PayType, CompRatio,
+    MinimumRate/MaximumRate) - add them here once a real tenant response
+    confirms this shape."""
     return {
-        "base_salary": raw.get("BaseRate") or raw.get("AnnualSalary"),
+        "base_salary": raw.get("BaseRate") or raw.get("BaseSalary") or raw.get("AnnualSalary"),
         "currency": raw.get("CurrencyCode") or "USD",
-        "effective_date": _parse_date(raw.get("EffectiveDate")),
+        "effective_date": _parse_date(raw.get("EffectiveStart") or raw.get("EffectiveDate")),
     }
