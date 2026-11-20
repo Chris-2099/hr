@@ -6,6 +6,7 @@ module is the orchestration layer: call the client, map the response,
 resolve foreign keys, upsert, log the attempt.
 
     python -m src.api.jobvite                       # run every step once
+    python -m src.api.jobvite departments           # run one step
     python -m src.api.jobvite requisitions          # run one step
     python -m src.api.jobvite interviews <app_id>   # interviews needs an application id
 
@@ -29,6 +30,7 @@ from src.core.database import SessionLocal
 from src.api.clients.jobvite_client import JobviteClient, JobviteError
 from src.api.clients.jobvite_mapper import (
     map_candidate_and_application,
+    map_department,
     map_interview_slots,
     map_requisition,
 )
@@ -49,6 +51,37 @@ def _log_run(db: Session, entity: str, status: str, count: int, notes: str) -> N
         )
     )
     db.commit()
+
+
+def sync_departments(db: Session) -> dict:
+    """Jobvite's /department doesn't carry enough to create a full
+    Department row (no org hierarchy, no Dayforce xref) - matches by name
+    against an existing (Dayforce-sourced) department and attaches
+    jobvite_id; doesn't create new rows."""
+    client = JobviteClient()
+    try:
+        raw = client.get_departments()
+    except JobviteError as exc:
+        _log_run(db, "departments", "failure", 0, str(exc))
+        return {"processed": 0, "error": str(exc)}
+
+    processed = 0
+    skipped: list[str] = []
+    for item in raw.get("departments", []):
+        mapped = map_department(item)
+        if not mapped["jobvite_eid"]:
+            continue
+        dept = db.query(models.Department).filter(models.Department.name == mapped["department_name"]).first()
+        if not dept:
+            skipped.append(mapped["jobvite_eid"])
+            continue
+        dept.jobvite_id = mapped["jobvite_eid"]
+        processed += 1
+    db.commit()
+
+    notes = f"Matched {processed} department(s) to a Jobvite id by name; skipped {len(skipped)} (no matching department)."
+    _log_run(db, "departments", "success", processed, notes)
+    return {"processed": processed, "skipped": skipped}
 
 
 def sync_requisitions(db: Session) -> dict:
@@ -122,7 +155,7 @@ def sync_candidates(db: Session) -> dict:
         row = existing or models.Candidate(candidate_id=cand_fields["jobvite_eid"], jobvite_eid=cand_fields["jobvite_eid"])
         for field in ("first_name", "last_name", "email", "city", "state", "postal_code", "country",
                       "current_title", "current_company_name", "work_status", "veteran_status",
-                      "source", "source_type", "gender", "race_ethnicity"):
+                      "source", "source_type"):
             setattr(row, field, cand_fields[field])
         if not existing:
             db.add(row)
@@ -152,6 +185,9 @@ def sync_candidates(db: Session) -> dict:
         app_row.disposition = app_fields["disposition"]
         app_row.hire_date = app_fields["hire_date"]
         app_row.start_date = app_fields["start_date"]
+        app_row.consent_status = app_fields["consent_status"]
+        app_row.personal_data_processing_status = app_fields["personal_data_processing_status"]
+        app_row.has_artifacts = app_fields["has_artifacts"]
         if not existing_app:
             db.add(app_row)
         processed += 1
@@ -202,10 +238,13 @@ def sync_interviews(db: Session, application_id: str) -> dict:
 
 
 def run_all() -> None:
-    """requisitions + candidates only - interviews needs a specific
-    application_id, not a blanket "sync everything" call."""
+    """departments + requisitions + candidates - interviews needs a
+    specific application_id, not a blanket "sync everything" call.
+    Departments run first since requisition FK resolution benefits from
+    jobvite_id being attached, though matching itself is still by name."""
     db = SessionLocal()
     try:
+        logger.info("departments: %s", sync_departments(db))
         logger.info("requisitions: %s", sync_requisitions(db))
         logger.info("candidates: %s", sync_candidates(db))
     finally:
@@ -217,7 +256,7 @@ def main() -> None:
     parser.add_argument(
         "step",
         nargs="?",
-        choices=["requisitions", "candidates", "interviews"],
+        choices=["departments", "requisitions", "candidates", "interviews"],
         help="Run a single step instead of all of them.",
     )
     parser.add_argument("application_id", nargs="?", help="Required when step=interviews.")
@@ -236,7 +275,11 @@ def main() -> None:
     elif args.step:
         db = SessionLocal()
         try:
-            fn = {"requisitions": sync_requisitions, "candidates": sync_candidates}[args.step]
+            fn = {
+                "departments": sync_departments,
+                "requisitions": sync_requisitions,
+                "candidates": sync_candidates,
+            }[args.step]
             logger.info("%s: %s", args.step, fn(db))
         finally:
             db.close()

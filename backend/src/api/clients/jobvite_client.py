@@ -82,3 +82,8 @@ class JobviteClient:
         if workflow_state_id:
             params["workflowStateId"] = workflow_state_id
         return self._get("interview", params)
+
+    def get_departments(self) -> dict:
+        """GET /department - the department taxonomy Jobvite requisitions are
+        filed under. No pagination params - this is a small, fixed list."""
+        return self._get("department")

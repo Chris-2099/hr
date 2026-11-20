@@ -30,16 +30,6 @@ YEARS_OF_HISTORY = 6
 
 GENDERS = ["Male", "Female", "Decline to Self Identify"]
 GENDER_WEIGHTS = [0.47, 0.49, 0.04]
-RACE_ETHNICITIES = [
-    "White",
-    "Black or African American",
-    "Hispanic or Latino",
-    "Asian",
-    "Two Or More Races",
-    "American Indian",
-    "Hawaiian Or Pacific Islander",
-]
-RACE_WEIGHTS = [0.52, 0.12, 0.14, 0.14, 0.05, 0.015, 0.015]
 
 DEPARTMENTS = [
     # id, name, division
@@ -174,10 +164,6 @@ def weighted_gender() -> str:
     return random.choices(GENDERS, weights=GENDER_WEIGHTS)[0]
 
 
-def weighted_race() -> str:
-    return random.choices(RACE_ETHNICITIES, weights=RACE_WEIGHTS)[0]
-
-
 def weighted_location() -> str:
     return random.choices([l[0] for l in LOCATIONS], weights=LOCATION_WEIGHTS)[0]
 
@@ -258,6 +244,7 @@ def _seed_departments(db) -> dict[str, models.Department]:
         d = models.Department(
             department_id=dept_id,
             dayforce_xref_code=f"ORGUNIT-{dept_id}",
+            jobvite_id=f"jvdept-{dept_id.lower()}",
             name=name,
             division=division,
             active=True,
@@ -335,7 +322,6 @@ def _make_employee(dept_id, position, location_id, hire_date, manager_id=None) -
         last_name=last,
         email=f"{first.lower()}.{last.lower()}@company.example",
         gender=weighted_gender(),
-        race_ethnicity=weighted_race(),
         birth_date=fake.date_of_birth(minimum_age=23, maximum_age=62),
         hire_date=hire_date,
         employment_status="Active",
@@ -758,8 +744,6 @@ def _seed_candidates(db) -> list[models.Candidate]:
             veteran_status=random.choices(CANDIDATE_VETERAN_STATUSES, weights=CANDIDATE_VETERAN_STATUS_WEIGHTS)[0],
             source=source,
             source_type=source_type,
-            gender=weighted_gender(),
-            race_ethnicity=weighted_race(),
             is_internal=random.random() < 0.08,
         )
         db.add(c)
@@ -787,6 +771,9 @@ def _seed_applications_and_interviews(db, requisitions, candidates, employees):
                 workflow_state="New",
                 workflow_state_eid=WORKFLOW_STATE_EIDS["New"],
                 applied_date=applied,
+                consent_status=random.choices(["Accepted", "Declined", "Not Required"], weights=[0.85, 0.05, 0.10])[0],
+                personal_data_processing_status=random.choices(["Accepted", "Pending"], weights=[0.92, 0.08])[0],
+                has_artifacts=random.random() < 0.85,
             )
 
             if req.job_state == "Filled" and not hired_done and cand == req_candidates[0]:

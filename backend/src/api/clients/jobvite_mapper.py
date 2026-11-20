@@ -42,8 +42,6 @@ def map_candidate_and_application(raw: dict) -> tuple[dict, dict]:
         "veteran_status": app.get("veteranStatus") or "Not a Veteran",
         "source": app.get("source") or "",
         "source_type": app.get("sourceType") or "",
-        "gender": app.get("gender") or "Decline to Self Identify",
-        "race_ethnicity": raw.get("race") or "",
     }
 
     application_fields = {
@@ -54,10 +52,25 @@ def map_candidate_and_application(raw: dict) -> tuple[dict, dict]:
         "applied_date": epoch_ms_to_date(app.get("sentDate")),
         "hire_date": epoch_ms_to_date(app.get("hireDate")),
         "start_date": epoch_ms_to_date(app.get("startDate")),
+        "consent_status": app.get("consentStatus"),
+        "personal_data_processing_status": app.get("personalDataProcessingStatus"),
+        "has_artifacts": app.get("hasArtifacts"),
         # resolved against requisitions.jobvite_eid by the sync route, not here
         "requisition_jobvite_eid": job.get("eId"),
     }
     return candidate_fields, application_fields
+
+
+def map_department(raw: dict) -> dict:
+    """One element of GET /department's `departments` array -> fields to
+    match against an existing (Dayforce-sourced) Department by name and
+    attach a jobvite_id to. Jobvite's /department endpoint doesn't carry
+    enough to create a full Department row on its own (no org hierarchy,
+    no Dayforce xref) - see sync_departments in src/api/jobvite.py."""
+    return {
+        "jobvite_eid": raw.get("eId"),
+        "department_name": raw.get("name"),
+    }
 
 
 def map_requisition(raw: dict) -> dict:

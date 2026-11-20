@@ -118,6 +118,7 @@ class Department(Base):
 
     department_id: Mapped[str] = mapped_column(String(20), primary_key=True)
     dayforce_xref_code: Mapped[str] = mapped_column(String(30), unique=True)  # Dayforce OrgUnitXRefCode
+    jobvite_id: Mapped[str | None] = mapped_column(String(30), nullable=True, unique=True)  # Jobvite department.eId (GET /department)
     name: Mapped[str] = mapped_column(String(150))
     division: Mapped[str] = mapped_column(String(150))
     parent_department_id: Mapped[str | None] = mapped_column(
@@ -165,8 +166,7 @@ class Employee(Base):
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(255))
-    gender: Mapped[str] = mapped_column(String(30))
-    race_ethnicity: Mapped[str] = mapped_column(String(50))  # Dayforce: Ethnicities subordinate resource
+    gender: Mapped[str] = mapped_column(String(30))  # Dayforce Employees.Gender (confirmed real field)
     birth_date: Mapped[dt.date] = mapped_column(Date)
     hire_date: Mapped[dt.date] = mapped_column(Date)
     termination_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
@@ -362,8 +362,6 @@ class Candidate(Base):
     veteran_status: Mapped[str] = mapped_column(String(50), default="Not a Veteran")  # application.veteranStatus
     source: Mapped[str] = mapped_column(String(100))  # application.source
     source_type: Mapped[str] = mapped_column(String(50))  # application.sourceType: Jobboard|Career Site|Referral|Agency
-    gender: Mapped[str] = mapped_column(String(30))  # application.gender
-    race_ethnicity: Mapped[str] = mapped_column(String(50))  # candidates.race
     is_internal: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
@@ -396,6 +394,10 @@ class Application(Base):
     new_hire_90day_retained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     new_hire_1yr_retained: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     hiring_manager_satisfaction: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1-5
+    # Jobvite GDPR/consent fields (application.consentStatus / .personalDataProcessingStatus / .hasArtifacts)
+    consent_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    personal_data_processing_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    has_artifacts: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
 
 class Interview(Base):
@@ -418,6 +420,24 @@ class Interview(Base):
     # fields - flattened here for a basic implementation.
     evaluation_score: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1-5
     recommendation: Mapped[str | None] = mapped_column(String(30), nullable=True)  # Strong Yes..Strong No
+
+
+class CompensationBenchmark(Base):
+    """Market pay-range data for a position, loaded from an external
+    compensation survey (e.g. Radford, Mercer) to compare actual/seeded
+    comp against. No Jobvite/Dayforce source provides this - populate by
+    hand once real survey data exists; left empty by the seed script."""
+
+    __tablename__ = "compensation_benchmarks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    position_id: Mapped[str] = mapped_column(ForeignKey("positions.position_id"))
+    source: Mapped[str] = mapped_column(String(100), default="")  # e.g. "Radford 2026 Tech Survey"
+    market_min: Mapped[float] = mapped_column(Float)
+    market_mid: Mapped[float] = mapped_column(Float)
+    market_max: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3), default="USD")
+    benchmark_date: Mapped[dt.date] = mapped_column(Date)
 
 
 # ---------------------------------------------------------------------------

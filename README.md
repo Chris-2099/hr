@@ -95,14 +95,32 @@ field mapping is called out in an inline comment next to its column).
   historical org charts would need a `WorkAssignment` history table, which
   is out of scope here.
 - **Jobvite-shaped (ATS):** `requisitions`, `candidates`, `applications`,
-  `interviews`. Field names and types follow the Jobvite API v2 response
-  spec field-by-field — all renamed to snake_case and present as real
-  columns, so wiring up a real sync later is a field-mapping exercise, not a
-  schema redesign.
+  `interviews`, plus a thin `departments.jobvite_id` sync (`src/api/jobvite.py:sync_departments`
+  matches Jobvite's `/department` taxonomy to an existing department by
+  name — Jobvite's response doesn't carry enough to create a department on
+  its own). Field names and types follow the Jobvite API v2 response spec
+  field-by-field — all renamed to snake_case and present as real columns,
+  so wiring up a real sync later is a field-mapping exercise, not a schema
+  redesign. `applications.consent_status`/`personal_data_processing_status`/
+  `has_artifacts` are real Jobvite GDPR/compliance fields, not demo filler.
+- **`compensation_benchmarks`** — market pay-range data per position (min/
+  mid/max, source, as-of date). No Jobvite/Dayforce API provides this —
+  it's a reference table meant to be loaded by hand from an external
+  compensation survey (Radford, Mercer, etc.) once you have one; the seed
+  script leaves it empty rather than inventing benchmark numbers.
 
 `roles`, `users`, and `user_department_scopes` still exist as seeded data
 (see "Access control" below) but nothing in this repo reads them to gate
 access anymore.
+
+**Fields removed in this branch vs. the original charter-derived schema:**
+`candidates.gender`/`race_ethnicity` and `employees.race_ethnicity` were
+invented for fuller-looking demo data but were never backed by a real,
+implemented API call in either this repo or `main`'s — removed rather than
+carried forward as if they were real. `employees.gender` was kept: it's a
+confirmed real field on Dayforce's base `Employees` resource (see
+`dayforce_mapper.py`'s docstring), independently verified and already
+mapped by `sync_employees`.
 
 ## Access control: now Power BI's job, not this repo's
 
