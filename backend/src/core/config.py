@@ -20,6 +20,18 @@ class Settings(BaseSettings):
     DISABLE_AUTH: bool = True
     DEV_DEFAULT_USER_EMAIL: str = "admin"
 
+    # SSO (Entra ID) - wired but dormant. AUTH_MODE stays "local" until a
+    # real Entra App Registration exists; "hybrid" would add Microsoft
+    # sign-in alongside local login, "entra" would require it. The frontend
+    # reads this via GET /api/auth/config and only enables its "Sign in
+    # with Microsoft" button when this isn't "local" - see
+    # src/api/routers/auth.py and frontend/src/pages/Login.tsx.
+    AUTH_MODE: str = "local"  # local | entra | hybrid
+    ENTRA_TENANT_ID: str = ""
+    ENTRA_CLIENT_ID: str = ""
+    ENTRA_CLIENT_SECRET: str = ""
+    ENTRA_REDIRECT_URI: str = ""
+
     # Source system credentials for the ingestion pipeline (src/api/jobvite.py,
     # src/api/dayforce.py).
     JOBVITE_URL: str = ""

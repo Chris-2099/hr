@@ -56,6 +56,18 @@ attempt rather than silently doing nothing.
 - **`backend/src/export_powerbi.py`** — reads every table out of the
   database into a pandas DataFrame and writes one CSV per table, for
   anyone pointing Power BI at this data independently of the web app.
+- **`frontend/`** — Vite + React + TypeScript SPA. Header + sidebar layout
+  (`src/Layout.tsx`, `src/components/layout/`), RBAC-aware (hides
+  compensation columns/salary when the signed-in user's role can't see
+  them - the backend already enforces this; the frontend just doesn't
+  render what it never received). Built so far: Executive Snapshot
+  (`pages/Summary.tsx`), Employees directory (`pages/Employees.tsx`), and a
+  Power BI page (`pages/PowerBI.tsx`) - everything else in the nav
+  (Talent Acquisition, Retention, Performance, Engagement, Compensation) is
+  a placeholder (`pages/ComingSoon.tsx`) pending the next pass. No Redux -
+  plain `fetch` + React Context (`AuthContext.tsx`) for auth state and
+  per-page `useState`/`useEffect` for data, since nothing here needs more
+  than that.
 
 ## Quick start (local)
 
@@ -67,7 +79,7 @@ cp .env.example .env            # defaults work as-is for local dev
 python -m src.seed.seed_data     # (re)creates hr_dashboard.db with fresh fake data
 uvicorn src.main:app --reload --port 8000
 
-# Frontend (separate terminal, see frontend/ once rebuilt)
+# Frontend (separate terminal)
 cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
@@ -97,11 +109,12 @@ docker compose up --build
 ```
 
 Seeds the DB into a named volume on first boot only, then serves the API
-on `http://localhost:8000` (the frontend container, once added, will proxy
-through it). Set `SECRET_KEY` in a `.env` file at the repo root before any
-real deployment — the default is a dev placeholder. Ingestion and the
-Power BI CSV export are separate, on-demand steps, not part of container
-startup — run them via `docker compose run --rm backend python -m src.api.jobvite`
+on `http://localhost:8000` and the frontend (static build served by nginx,
+proxying `/api/*` to the backend container) on `http://localhost:8080`.
+Set `SECRET_KEY` in a `.env` file at the repo root before any real
+deployment — the default is a dev placeholder. Ingestion and the Power BI
+CSV export are separate, on-demand steps, not part of container startup —
+run them via `docker compose run --rm backend python -m src.api.jobvite`
 (etc.) or a cron entry.
 
 ## Data model
@@ -165,8 +178,33 @@ Five roles, enforced server-side on every data route (`src/core/deps.py`,
 - **Route-level:** `require_roles(...)` gates entire endpoints (e.g., only
   admins can manage users or trigger a sync).
 
-Auth is local email/password + JWT (`src/utils/auth.py`,
-`src/api/routers/auth.py`) — no Entra/SSO wiring in this build.
+## Auth: local now, Entra ID (SSO) wired but dormant
+
+This build uses local email/password + JWT (`src/utils/auth.py`,
+`src/api/routers/auth.py`) by default. The schema and code are already
+shaped for Microsoft Entra ID SSO, same as before, but **do not flip
+`AUTH_MODE` on until you're actually ready**:
+
+- `users.auth_provider` (`local`/`entra`) and `users.entra_object_id` exist
+  now, unused until Entra is wired up.
+- `/api/auth/entra/login` and `/api/auth/entra/callback` exist as `501`
+  stubs so the frontend's "Sign in with Microsoft" button has a real route
+  to point at later instead of a 404.
+- The frontend calls `GET /api/auth/config` on load; its "Sign in with
+  Microsoft" button only enables itself once that reports `auth_mode !=
+  "local"` — see `frontend/src/pages/Login.tsx` and `frontend/src/msal.ts`
+  (MSAL.js is wired but never invoked unless that button is clickable).
+- `.env` has `AUTH_MODE` and `ENTRA_*` placeholders — see the docstring at
+  the top of `src/utils/auth.py`/`src/api/routers/auth.py` for the exact
+  steps to implement the callback once an App Registration exists in
+  Entra. The swap is designed to end at the same internal JWT this build
+  already issues, so `deps.py` and every router stay unchanged.
+
+**To actually turn SSO on:** create the Entra App Registration, add
+`frontend/.env`'s `VITE_ENTRA_TENANT_ID`/`VITE_ENTRA_CLIENT_ID` and
+`backend/.env`'s `ENTRA_*` values, implement the two `501` stub routes per
+their docstrings, then flip `AUTH_MODE` to `entra` or `hybrid`. Nothing
+else needs to change on either side.
 
 ## API integrations: real code, placeholder credentials
 
@@ -206,6 +244,17 @@ Dayforce's identity service returns `invalid_grant`), logged to
 **To actually go live:** fill in real values in `backend/.env` for whichever
 system you have credentials for first — nothing else needs to change.
 
+## Power BI: manual-connect placeholder, not embedded SSO
+
+`frontend/src/pages/PowerBI.tsx` is deliberately simple, not the original
+build's MSAL-based "embed for your organization" pattern (that needed a
+real Azure AD app registration and a published report to ever work). This
+version: shows "waiting for connection" until you paste a Power BI
+report's embed/publish URL into a form, then renders it in an `<iframe>`.
+The URL is stored in the browser's `localStorage` only — no backend
+involved yet. Once a real embed flow (MSAL-based or otherwise) is needed,
+this page is the one to replace; nothing else depends on it.
+
 ## Known simplifications (by design, given scope)
 
 - Recruiting and HRIS fake data are generated independently and are
@@ -228,3 +277,12 @@ system you have credentials for first — nothing else needs to change.
   client but not yet supplied by `sync_interviews()` — we don't have a
   source for an interview-block id anywhere in our data yet; a real sync
   needs a discovery step first (see the client's docstring).
+- Only 2 of the 6 charter dashboard themes are built in the frontend so
+  far (Executive Snapshot, Employees); the rest are `ComingSoon`
+  placeholders in the nav. No automated frontend tests - verified by
+  actually running the Vite dev server against the live backend and
+  checking rendered output (including RBAC: created a `viewer` user and
+  confirmed compensation columns disappear) rather than by unit tests.
+- The frontend bundle is a single ~840KB chunk (mostly MSAL + Recharts) -
+  fine at this scale; revisit with route-based code-splitting if the app
+  grows further before the SSO/extra-dashboards work lands.

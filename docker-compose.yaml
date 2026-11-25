@@ -27,7 +27,12 @@ services:
     ports:
       - "8000:8000" # exposed for debugging; the frontend reaches it via the internal network
 
-  # frontend: added once the frontend rebuild lands.
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
 
 volumes:
   hr_db:
