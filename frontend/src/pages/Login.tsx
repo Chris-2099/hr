@@ -35,46 +35,57 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">HR Workforce Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">Sign in to continue.</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+      <div
+        className="pointer-events-none fixed inset-0 opacity-40"
+        style={{
+          background:
+            "radial-gradient(600px circle at 20% 20%, rgba(79,70,229,0.25), transparent 60%), radial-gradient(600px circle at 80% 80%, rgba(14,165,233,0.2), transparent 60%)",
+        }}
+      />
+
+      <div className="relative w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-base font-bold text-white">
+          H
+        </div>
+        <h1 className="mt-4 text-xl font-semibold tracking-tight text-white">HR Workforce Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-400">Sign in to continue.</p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700">Email</label>
+            <label className="block text-sm font-medium text-slate-300">Email</label>
             <input
               type="text"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Password</label>
+            <label className="block text-sm font-medium text-slate-300">Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-sm text-red-400">{formError}</p>}
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-md bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-900/30 transition-colors hover:bg-indigo-500 disabled:opacity-60"
           >
             {submitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs text-slate-400">or</span>
-          <div className="h-px flex-1 bg-slate-200" />
+        <div className="mt-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-800" />
+          <span className="text-xs text-slate-500">or</span>
+          <div className="h-px flex-1 bg-slate-800" />
         </div>
 
         <button
@@ -82,7 +93,7 @@ export default function Login() {
           onClick={onMicrosoftSignIn}
           disabled={!ssoEnabled}
           title={ssoEnabled ? "Sign in with your Microsoft account" : "SSO isn't enabled yet"}
-          className="mt-4 w-full rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 w-full rounded-lg border border-slate-700 py-2.5 text-sm font-medium text-slate-400 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           Sign in with Microsoft {!ssoEnabled && "(coming soon)"}
         </button>

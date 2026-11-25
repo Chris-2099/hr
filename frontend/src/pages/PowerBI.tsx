@@ -28,18 +28,21 @@ export default function PowerBI() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-slate-900">Power BI</h1>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Power BI</h1>
+            <p className="mt-1 text-sm text-slate-500">Embedded report</p>
+          </div>
           <button
             onClick={() => setEditing(true)}
-            className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
           >
-            <Settings size={16} /> Change report
+            <Settings size={15} /> Change report
           </button>
         </div>
         <iframe
           title="Power BI report"
           src={embedUrl}
-          className="h-[75vh] w-full rounded-xl border border-slate-200 bg-white"
+          className="h-[75vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm"
           allowFullScreen
         />
       </div>
@@ -48,8 +51,10 @@ export default function PowerBI() {
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <PieChart size={48} className="mb-4 text-slate-300" />
-      <h1 className="text-lg font-semibold text-slate-900">Waiting for connection</h1>
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500">
+        <PieChart size={26} />
+      </span>
+      <h1 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">Waiting for connection</h1>
       <p className="mt-1 max-w-md text-sm text-slate-500">
         No Power BI report is configured yet. Publish a report to a workspace,
         then paste its embed/publish URL below.
@@ -61,11 +66,11 @@ export default function PowerBI() {
           placeholder="https://app.powerbi.com/reportEmbed?..."
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
         <button
           type="submit"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-500"
         >
           Connect
         </button>
