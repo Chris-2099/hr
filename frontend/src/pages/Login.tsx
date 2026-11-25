@@ -3,6 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { signInWithMicrosoft } from "../msal";
 
+// DEV-ONLY shortcut: logs straight in as the seeded demo admin account
+// (admin/password) so testing doesn't require typing credentials every
+// time. This is a real login call, not an auth bypass - it works whether
+// the backend's DISABLE_AUTH is on or off. Remove this button (and
+// DEMO_LOGIN_ENABLED) before any real deployment.
+const DEMO_LOGIN_ENABLED = true;
+const DEMO_EMAIL = "admin";
+const DEMO_PASSWORD = "password";
+
 export default function Login() {
   const { login, authConfig } = useAuth();
   const navigate = useNavigate();
@@ -22,6 +31,19 @@ export default function Login() {
       navigate("/");
     } catch {
       setFormError("Invalid email or password.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onDemoLogin() {
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await login(DEMO_EMAIL, DEMO_PASSWORD);
+      navigate("/");
+    } catch {
+      setFormError("Demo login failed - is the backend seeded and reachable?");
     } finally {
       setSubmitting(false);
     }
@@ -50,6 +72,24 @@ export default function Login() {
         </div>
         <h1 className="mt-4 text-xl font-semibold tracking-tight text-white">HR Workforce Dashboard</h1>
         <p className="mt-1 text-sm text-slate-400">Sign in to continue.</p>
+
+        {DEMO_LOGIN_ENABLED && (
+          <>
+            <button
+              type="button"
+              onClick={onDemoLogin}
+              disabled={submitting}
+              className="mt-6 w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-900/30 transition-colors hover:bg-emerald-500 disabled:opacity-60"
+            >
+              {submitting ? "Signing in..." : "Continue (demo login)"}
+            </button>
+            <div className="mt-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-slate-800" />
+              <span className="text-xs text-slate-500">or sign in manually</span>
+              <div className="h-px flex-1 bg-slate-800" />
+            </div>
+          </>
+        )}
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
