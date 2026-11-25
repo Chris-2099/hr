@@ -1,11 +1,14 @@
 services:
-  # One-shot pipeline container: seed (first run only) -> sync -> export to
-  # CSV. No server, no exposed port - nothing to serve now that Power BI is
-  # the frontend. Run it on whatever schedule you need:
-  #   docker compose run --rm backend
   backend:
     build: ./backend
     environment:
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      ALLOWED_ORIGINS: http://localhost:8080
+      # Docker Compose is the closer-to-real-deployment path, so auth is ON
+      # by default here (unlike local `uvicorn --reload` dev, where
+      # DISABLE_AUTH defaults true). Override with DISABLE_AUTH=true in a
+      # .env file at the repo root if you want the compose stack login-free too.
+      DISABLE_AUTH: ${DISABLE_AUTH:-false}
       # Real client code exists for both (src/api/clients/) - these just
       # stay empty/placeholder until real credentials are supplied, which is
       # all that's needed to go from "implemented" to "working".
@@ -21,6 +24,10 @@ services:
     volumes:
       - hr_db:/data
       - ./powerbi_export:/export
+    ports:
+      - "8000:8000" # exposed for debugging; the frontend reaches it via the internal network
+
+  # frontend: added once the frontend rebuild lands.
 
 volumes:
   hr_db:

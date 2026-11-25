@@ -27,6 +27,8 @@ way is silent until a real call is made.
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 
 from src.core.config import settings
@@ -38,7 +40,7 @@ class JobviteError(RuntimeError):
 
 class JobviteClient:
     def __init__(self) -> None:
-        self.base_url = (settings.JOBVITE_URL or "https://api.jobvite.com/api/v2").rstrip("/")
+        self.base_url = settings.JOBVITE_URL.rstrip("/")
         self.api_key = settings.JOBVITE_API_KEY
         self.api_secret = settings.JOBVITE_API_SECRET
 
@@ -60,7 +62,7 @@ class JobviteClient:
         return resp.json()
 
     def get_requisitions(self, start: int = 1, count: int = 100, job_state: str | None = None) -> dict:
-        """GET /job - requisitions. `job_state` maps to Jobvite's `jobStatus` filter param."""
+        """ GET /job - requisitions """
         params: dict = {"start": start, "count": count}
         if job_state:
             params["jobStatus"] = job_state
@@ -74,7 +76,7 @@ class JobviteClient:
         date_start: str | None = None,
         date_end: str | None = None,
     ) -> dict:
-        """GET /candidate - candidates + their nested application/job data."""
+        """ GET /candidate - candidates + their nested application/job data """
         params: dict = {"start": start, "count": count}
         if wflowstate:
             params["wflowstate"] = wflowstate
@@ -90,17 +92,7 @@ class JobviteClient:
         application_id: str | None = None,
         workflow_state_id: str | None = None,
     ) -> dict:
-        """GET /interview - interview blocks for an application/workflow state.
-
-        `eid` (the interview-block id itself) is documented as a required
-        param - omitting it is reported to return HTTP 412. We don't yet
-        have a source for interview-block ids anywhere in our data (our
-        own sync only ever has an application_id to key off of), so this
-        is callable with `eid` when a caller has one, but src/api/jobvite.py's
-        sync_interviews() doesn't supply it today - calling it for real
-        will likely need a different discovery step first (e.g. listing
-        interview blocks for an application) once real credentials exist
-        to confirm against."""
+        """ GET /interview - interview blocks for an application/workflow state """
         params: dict = {}
         if eid:
             params["eId"] = eid
@@ -111,8 +103,18 @@ class JobviteClient:
         return self._get("interview", params)
 
     def get_departments(self, start: int = 1, count: int = 500) -> dict:
-        """GET /department - the department taxonomy Jobvite requisitions are
-        filed under. Documented params: start/count (default count 500) plus
-        ids/name filters we don't use - pass count explicitly if a tenant
-        has more than 500 departments."""
+        """ GET /department - the department taxonomy """
         return self._get("department", {"start": start, "count": count})
+
+    def get_offerLetterCompletedList(
+        self, 
+        date_start: str,
+        date_end: str, 
+    ) -> dict[str, Any]:
+        """ GET /offerLetterCompletedList """ 
+        return self._get("offerLetterCompletedList", params={
+                "offerLetterCompletedList":"ESIGNATURE",
+                "datestart": date_start,
+                "dateend": date_end,
+            }
+    )
