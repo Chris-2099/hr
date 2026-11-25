@@ -83,20 +83,27 @@ uvicorn src.main:app --reload --port 8000
 cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
-**Login is disabled by default for easier local testing**
-(`DISABLE_AUTH=true` in `backend/.env.example`) — hitting any endpoint
-auto-authenticates you as the seeded `admin` user, and an
-`X-Dev-User-Email` header lets you impersonate any other seeded user to
-exercise RBAC without a login screen. This is a backend-only flag
-(`src/core/config.py` / `src/core/deps.py:get_current_user`); the real
-login flow and all role/department enforcement underneath it are
-unchanged and fully testable this way — **set `DISABLE_AUTH=false`**
-before any real deployment (already the default in `docker-compose.yaml`).
+**The frontend has zero login UI right now** — no login page, no
+redirect-to-login gate, no token handling at all. It just calls
+`GET /api/auth/me` and renders whatever user comes back. This only works
+because the backend's `DISABLE_AUTH=true` (the default in
+`backend/.env.example`) auto-authenticates every request as the seeded
+`admin` user regardless of what's sent — an `X-Dev-User-Email` header lets
+you impersonate any other seeded user via `curl` to exercise RBAC. This is
+a backend-only flag (`src/core/config.py` / `src/core/deps.py:get_current_user`);
+role/department enforcement underneath it is unchanged and fully testable
+this way. **Set `DISABLE_AUTH=false`** before any real deployment (already
+the default in `docker-compose.yaml`) — but note the frontend currently
+has no way to log in if you do, since that UI was deliberately ripped out
+during testing (see git history for `Login.tsx`/`AuthContext.tsx` if you
+need to bring a real login flow back).
 
 Seeded demo accounts (see `DEMO_USERS` in `seed_data.py`; password
 `password` for all): `admin`, `admin@admin` (both `admin` role). Use
 `POST /api/admin/users` to create accounts for the other roles
-(`executive`, `hr_business_partner`, `recruiter`, `viewer`) as needed.
+(`executive`, `hr_business_partner`, `recruiter`, `viewer`) as needed —
+you can exercise their RBAC via `curl -H "X-Dev-User-Email: ..."` even
+though the frontend has no UI to switch users.
 
 To pull real data instead of/alongside the demo seed: run
 `python -m src.api.jobvite` / `python -m src.api.dayforce` (or trigger the
@@ -178,33 +185,23 @@ Five roles, enforced server-side on every data route (`src/core/deps.py`,
 - **Route-level:** `require_roles(...)` gates entire endpoints (e.g., only
   admins can manage users or trigger a sync).
 
-## Auth: local now, Entra ID (SSO) wired but dormant
+## Auth: backend has it, frontend currently has none
 
-This build uses local email/password + JWT (`src/utils/auth.py`,
-`src/api/routers/auth.py`) by default. The schema and code are already
-shaped for Microsoft Entra ID SSO, same as before, but **do not flip
-`AUTH_MODE` on until you're actually ready**:
+The backend still has real local email/password + JWT auth
+(`src/utils/auth.py`, `src/api/routers/auth.py`, `POST /api/auth/login`)
+and dormant Entra ID (SSO) stubs (`AUTH_MODE`/`ENTRA_*` settings,
+`/api/auth/entra/login` + `/callback` as `501`s) — none of that backend
+code was touched or removed.
 
-- `users.auth_provider` (`local`/`entra`) and `users.entra_object_id` exist
-  now, unused until Entra is wired up.
-- `/api/auth/entra/login` and `/api/auth/entra/callback` exist as `501`
-  stubs so the frontend's "Sign in with Microsoft" button has a real route
-  to point at later instead of a 404.
-- The frontend calls `GET /api/auth/config` on load; its "Sign in with
-  Microsoft" button only enables itself once that reports `auth_mode !=
-  "local"` — see `frontend/src/pages/Login.tsx` and `frontend/src/msal.ts`
-  (MSAL.js is wired but never invoked unless that button is clickable).
-- `.env` has `AUTH_MODE` and `ENTRA_*` placeholders — see the docstring at
-  the top of `src/utils/auth.py`/`src/api/routers/auth.py` for the exact
-  steps to implement the callback once an App Registration exists in
-  Entra. The swap is designed to end at the same internal JWT this build
-  already issues, so `deps.py` and every router stay unchanged.
-
-**To actually turn SSO on:** create the Entra App Registration, add
-`frontend/.env`'s `VITE_ENTRA_TENANT_ID`/`VITE_ENTRA_CLIENT_ID` and
-`backend/.env`'s `ENTRA_*` values, implement the two `501` stub routes per
-their docstrings, then flip `AUTH_MODE` to `entra` or `hybrid`. Nothing
-else needs to change on either side.
+**The frontend's login UI was deliberately deleted** (`Login.tsx`,
+`msal.ts`, and all token-handling in `AuthContext.tsx`/`api.ts`) because it
+kept getting in the way of testing. There is currently no way to log in
+through the UI, no logout button, and no SSO button — `AuthContext.tsx`
+just calls `GET /api/auth/me` and renders whoever the backend says you are
+(which, with `DISABLE_AUTH=true`, is always the seeded `admin` user). If
+you ever want real login back in the UI, the backend routes it needs
+(`/api/auth/login`, `/api/auth/me`, `/api/auth/config`) are all still
+there and unchanged — it's a frontend rebuild, not a backend one.
 
 ## API integrations: real code, placeholder credentials
 

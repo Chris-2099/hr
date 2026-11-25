@@ -1,4 +1,3 @@
-import { LogOut } from "lucide-react";
 import { useAuth } from "../../AuthContext";
 
 function initials(fullName: string) {
@@ -7,7 +6,7 @@ function initials(fullName: string) {
 }
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-6 backdrop-blur">
@@ -30,13 +29,6 @@ export default function Header() {
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
             {initials(user.full_name)}
           </div>
-          <button
-            onClick={logout}
-            title="Sign out"
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
       )}
     </header>

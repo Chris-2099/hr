@@ -1,20 +1,8 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
-let authToken: string | null = null;
-
-export function setAuthToken(token: string | null) {
-  authToken = token;
-  if (token) {
-    localStorage.setItem("hr_dashboard_token", token);
-  } else {
-    localStorage.removeItem("hr_dashboard_token");
-  }
-}
-
-export function loadStoredAuthToken(): string | null {
-  authToken = localStorage.getItem("hr_dashboard_token");
-  return authToken;
-}
+// No auth token handling here on purpose - zero login functionality during
+// testing. The backend's DISABLE_AUTH auto-authenticates every request
+// regardless of what's sent, so there's nothing to attach.
 
 export class ApiError extends Error {
   status: number;
@@ -28,7 +16,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   if (options.body) headers.set("Content-Type", "application/json");
-  if (authToken) headers.set("Authorization", `Bearer ${authToken}`);
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {

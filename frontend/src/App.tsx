@@ -1,33 +1,21 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./AuthContext";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./AuthContext";
 import Layout from "./Layout";
-import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import Summary from "./pages/Summary";
 import Employees from "./pages/Employees";
 import PowerBI from "./pages/PowerBI";
 import ComingSoon from "./pages/ComingSoon";
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="flex h-screen items-center justify-center text-sm text-slate-500">Loading…</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-}
-
+// No login gate here on purpose - zero login functionality during
+// testing. Every route renders directly; the backend's DISABLE_AUTH
+// auto-authenticates every request.
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            element={
-              <RequireAuth>
-                <Layout />
-              </RequireAuth>
-            }
-          >
+          <Route element={<Layout />}>
             <Route path="/" element={<Landing />} />
             <Route path="/executive-snapshot" element={<Summary />} />
             <Route path="/talent-acquisition" element={<ComingSoon title="Talent Acquisition" />} />
